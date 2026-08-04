@@ -1,0 +1,19 @@
+{
+  "name": "dnd-online",
+  "version": "1.0.0",
+  "description": "Play D&D online: build characters, run campaigns, and play live sessions with dice, chat, initiative, and a token map.",
+  "main": "server/index.js",
+  "scripts": {
+    "start": "node server/index.js",
+    "dev": "node server/index.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "express": "^4.19.2",
+    "express-session": "^1.18.0",
+    "socket.io": "^4.7.5"
+  }
+}
