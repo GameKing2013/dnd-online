@@ -39,5 +39,5 @@ app.get('/health', (req, res) => res.json({ ok: true }));
 socketHandlers.attach(io);
 
 server.listen(PORT, () => {
-  console.log(`D&D Online running at http://localhost:${PORT}`);
+  console.log(`Nat20 running at http://localhost:${PORT}`);
 });
