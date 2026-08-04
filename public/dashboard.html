@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dashboard - D&amp;D Online</title>
+<link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+<div class="topbar" id="topbar"></div>
+<div class="container">
+
+  <div class="panel">
+    <div class="row between">
+      <h2 class="mb0" style="border:none;padding:0;">Your Characters</h2>
+      <button id="newCharBtn">+ New Character</button>
+    </div>
+    <div id="charError" class="error"></div>
+    <div class="card-list mt" id="characterList"><p class="muted">Loading...</p></div>
+  </div>
+
+  <div class="panel">
+    <div class="row between">
+      <h2 class="mb0" style="border:none;padding:0;">Your Campaigns</h2>
+      <div class="row">
+        <button id="joinCampaignBtn" class="secondary">Join with Code</button>
+        <button id="newCampaignBtn">+ New Campaign</button>
+      </div>
+    </div>
+    <div id="campError" class="error"></div>
+    <div class="card-list mt" id="campaignList"><p class="muted">Loading...</p></div>
+  </div>
+
+</div>
+
+<script src="/js/api.js"></script>
+<script>
+let user;
+
+async function init() {
+  user = await requireUser();
+  if (!user) return;
+  renderTopbar('dashboard', user);
+  loadCharacters();
+  loadCampaigns();
+}
+
+async function loadCharacters() {
+  const el = document.getElementById('characterList');
+  try {
+    const { characters } = await api('GET', '/api/characters');
+    if (!characters.length) {
+      el.innerHTML = '<p class="muted">No characters yet. Create your first hero.</p>';
+      return;
+    }
+    el.innerHTML = characters.map((c) => `
+      <a class="card" style="text-decoration:none;color:inherit;display:block;" href="/character.html?id=${c.id}">
+        <h3>${escapeHtml(c.name)}</h3>
+        <p class="muted mb0">${escapeHtml(c.sheet.race || 'Race?')} ${escapeHtml(c.sheet.class || 'Class?')} &middot; Level ${c.sheet.level}</p>
+      </a>
+    `).join('');
+  } catch (err) {
+    document.getElementById('charError').textContent = err.message;
+  }
+}
+
+async function loadCampaigns() {
+  const el = document.getElementById('campaignList');
+  try {
+    const { campaigns } = await api('GET', '/api/campaigns');
+    if (!campaigns.length) {
+      el.innerHTML = '<p class="muted">No campaigns yet. Start one as a DM, or join with an invite code.</p>';
+      return;
+    }
+    el.innerHTML = campaigns.map((c) => {
+      const isDM = c.dmId === user.id;
+      return `
+      <a class="card" style="text-decoration:none;color:inherit;display:block;" href="/campaign.html?id=${c.id}">
+        <h3>${escapeHtml(c.name)} ${isDM ? '<span class="pill dm">DM</span>' : '<span class="pill">Player</span>'}</h3>
+        <p class="muted mb0">${escapeHtml(c.description || 'No description yet.')}</p>
+        <p class="muted mb0">${c.members.length} member${c.members.length === 1 ? '' : 's'} &middot; Code: ${c.inviteCode}</p>
+      </a>
+    `;
+    }).join('');
+  } catch (err) {
+    document.getElementById('campError').textContent = err.message;
+  }
+}
+
+document.getElementById('newCharBtn').addEventListener('click', async () => {
+  const name = prompt('Name your new character:');
+  if (!name) return;
+  try {
+    const { character } = await api('POST', '/api/characters', { name });
+    window.location.href = `/character.html?id=${character.id}`;
+  } catch (err) {
+    document.getElementById('charError').textContent = err.message;
+  }
+});
+
+document.getElementById('newCampaignBtn').addEventListener('click', async () => {
+  const name = prompt('Name your new campaign:');
+  if (!name) return;
+  try {
+    const { campaign } = await api('POST', '/api/campaigns', { name });
+    window.location.href = `/campaign.html?id=${campaign.id}`;
+  } catch (err) {
+    document.getElementById('campError').textContent = err.message;
+  }
+});
+
+document.getElementById('joinCampaignBtn').addEventListener('click', async () => {
+  const code = prompt('Enter the campaign invite code:');
+  if (!code) return;
+  try {
+    const { campaign } = await api('POST', '/api/campaigns/join', { code });
+    window.location.href = `/campaign.html?id=${campaign.id}`;
+  } catch (err) {
+    document.getElementById('campError').textContent = err.message;
+  }
+});
+
+init();
+</script>
+</body>
+</html>
