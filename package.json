@@ -1,7 +1,7 @@
 {
-  "name": "dnd-online",
+  "name": "nat20",
   "version": "1.0.0",
-  "description": "Play D&D online: build characters, run campaigns, and play live sessions with dice, chat, initiative, and a token map.",
+  "description": "Nat20: build characters, run campaigns, and play live D&D sessions with dice, chat, initiative, and a token map.",
   "main": "server/index.js",
   "scripts": {
     "start": "node server/index.js",
