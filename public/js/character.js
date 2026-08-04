@@ -39,6 +39,58 @@ const CLASS_DATA = {
   Wizard: { hitDie: 6, choose: 2, skills: ['arcana', 'history', 'insight', 'investigation', 'medicine', 'religion'] }
 };
 
+const ABILITY_TIPS = {
+  str: 'Strength: physical power. Affects melee attack/damage rolls, the Athletics skill, and how much you can carry.',
+  dex: 'Dexterity: agility and reflexes. Affects Armor Class, Initiative, ranged attacks, and Acrobatics/Sleight of Hand/Stealth.',
+  con: 'Constitution: health and stamina. Affects your hit points and Concentration saves.',
+  int: 'Intelligence: reasoning and memory. Affects Arcana/History/Investigation/Nature/Religion, and Wizard spellcasting.',
+  wis: 'Wisdom: awareness and insight. Affects Animal Handling/Insight/Medicine/Perception/Survival, and Cleric/Druid/Ranger spellcasting.',
+  cha: 'Charisma: force of personality. Affects Deception/Intimidation/Performance/Persuasion, and Bard/Paladin/Sorcerer/Warlock spellcasting.'
+};
+
+const SKILL_TIPS = {
+  acrobatics: 'Balance, tumbling, and escaping grapples.',
+  animalHandling: 'Calming, controlling, or reading the intentions of animals.',
+  arcana: 'Knowledge of spells, magic items, and magical traditions.',
+  athletics: 'Climbing, jumping, swimming, and grappling.',
+  deception: 'Convincingly hiding the truth.',
+  history: 'Knowledge of historical events, people, and civilizations.',
+  insight: 'Reading true intentions and detecting lies.',
+  intimidation: 'Influencing someone through threats or a show of force.',
+  investigation: 'Finding clues and deducing information from evidence.',
+  medicine: 'Diagnosing illness and stabilizing the dying.',
+  nature: 'Knowledge of terrain, plants, animals, and weather.',
+  perception: 'Spotting, hearing, or otherwise noticing things.',
+  performance: 'Entertaining an audience with music, acting, or storytelling.',
+  persuasion: 'Influencing others through tact and social grace.',
+  religion: 'Knowledge of deities, rites, and religious hierarchies.',
+  sleightOfHand: 'Manual trickery, like pickpocketing or planting an item.',
+  stealth: 'Hiding, moving silently, and avoiding notice.',
+  survival: 'Tracking, foraging, and navigating the wilderness.'
+};
+
+const FIELD_TIPS = {
+  race: "Your character's lineage. Mostly flavor and a few minor traits — doesn't restrict class or background choices.",
+  class: "Your character's adventuring profession. Determines hit die, combat role, and which skills/spells you can access.",
+  background: "Your character's life before adventuring. Grants extra skill proficiencies and roleplay hooks. In 5e rules, ANY background can pair with ANY class — there's no restriction, so a Barbarian Sage or Wizard Soldier is completely legal.",
+  alignment: "A rough moral/ethical compass for roleplay (e.g. Chaotic Good). It's a guideline for how your character acts, not a hard mechanical rule.",
+  level: 'Your character’s overall power tier (1–20). Higher levels grant more hit points, a bigger proficiency bonus, and new class features.',
+  experience: 'Experience points earned from adventuring. Accumulating enough XP raises your level.',
+  profBonus: "Bonus added to any roll you're proficient in (skills, saves, attacks). Grows automatically as you level up.",
+  ac: 'Armor Class: how hard you are to hit. An attack roll must meet or beat this number to land.',
+  initiativeBonus: 'A flat bonus to your Initiative roll, beyond your Dexterity modifier (usually 0 unless a feature grants more).',
+  initiative: 'Rolled as 1d20 + this total at the start of combat to determine turn order — higher goes first.',
+  speed: 'How many feet you can move on your turn.',
+  hpMax: 'The most hit points you can have at full health.',
+  hpCurrent: 'Your hit points right now. You fall unconscious at 0.',
+  hpTemp: 'Temporary hit points from spells/abilities. Lost before your real HP, and don’t stack with themselves.',
+  hitDice: 'Dice you can spend on a short rest to heal. You regain them on a long rest. Auto-fills from your class and level.'
+};
+
+function tipAttr(text) {
+  return `data-tip="${escapeHtml(text)}"`;
+}
+
 let character = null;
 let sheet = null;
 let saveTimer = null;
@@ -131,7 +183,7 @@ function bindInputs(root) {
 function abilityBoxes() {
   return ABILITIES.map((a) => `
     <div class="ability-box">
-      <label>${ABILITY_LABELS[a].slice(0,3).toUpperCase()}</label>
+      <label ${tipAttr(ABILITY_TIPS[a])}>${ABILITY_LABELS[a].slice(0,3).toUpperCase()}</label>
       <input type="number" class="score" data-path="abilities.${a}" data-numeric value="${sheet.abilities[a]}" style="text-align:center;font-size:20px;font-weight:bold;">
       <div class="mod" id="mod-${a}">${fmtMod(abilityMod(sheet.abilities[a]))}</div>
     </div>
@@ -143,7 +195,7 @@ function savesBlock() {
     <div class="row" style="margin-bottom:6px;">
       <input type="checkbox" data-path="saveProficiencies.${a}" ${sheet.saveProficiencies[a] ? 'checked' : ''} style="width:auto;">
       <span class="val" id="save-${a}-bonus" style="width:34px;display:inline-block;color:var(--gold-bright);font-weight:bold;">${fmtMod(abilityMod(sheet.abilities[a]) + (sheet.saveProficiencies[a] ? profBonus() : 0))}</span>
-      <span>${ABILITY_LABELS[a]}</span>
+      <span ${tipAttr(ABILITY_TIPS[a] + ' Check the box if you are proficient in this saving throw.')}>${ABILITY_LABELS[a]}</span>
     </div>
   `).join('');
 }
@@ -160,7 +212,7 @@ function skillsBlock() {
     <div class="row" style="margin-bottom:5px;${isClassSkill ? 'background:rgba(201,162,75,0.1);border-radius:4px;padding:2px 4px;' : ''}">
       <input type="checkbox" data-path="skillProficiencies.${key}" ${sheet.skillProficiencies[key] ? 'checked' : ''} style="width:auto;">
       <span class="val" id="skill-${key}-bonus" style="width:34px;display:inline-block;color:var(--gold-bright);font-weight:bold;">${fmtMod(abilityMod(sheet.abilities[ability]) + (sheet.skillProficiencies[key] ? profBonus() : 0))}</span>
-      <span>${label} <span class="muted">(${ability.toUpperCase()})</span>${isClassSkill ? ' <span class="pill dm" style="padding:0 6px;font-size:10px;">class</span>' : ''}</span>
+      <span ${tipAttr(SKILL_TIPS[key] || '')}>${label} <span class="muted">(${ability.toUpperCase()})</span>${isClassSkill ? ' <span class="pill dm" style="padding:0 6px;font-size:10px;">class</span>' : ''}</span>
     </div>`;
   }).join('');
   return hint + rows;
@@ -176,7 +228,7 @@ function choiceField(field, label, options) {
   const opts = options.map((o) => `<option value="${escapeHtml(o)}" ${val === o && !custom ? 'selected' : ''}>${escapeHtml(o)}</option>`).join('');
   return `
     <div class="field">
-      <label>${label}</label>
+      <label ${tipAttr(FIELD_TIPS[field] || '')}>${label}</label>
       <select onchange='onChoiceChange(this, "${field}", ${JSON.stringify(options)})'>
         <option value="">-- Choose --</option>
         ${opts}
@@ -337,8 +389,8 @@ function render() {
         ${choiceField('class', 'Class', Object.keys(CLASS_DATA))}
         ${choiceField('background', 'Background', BACKGROUNDS)}
         ${choiceField('alignment', 'Alignment', ALIGNMENTS)}
-        <div class="field"><label>Level</label><input type="number" min="1" max="20" data-path="level" data-numeric value="${sheet.level}" onchange="onLevelChange(this)"></div>
-        <div class="field"><label>Experience</label><input type="number" min="0" data-path="experience" data-numeric value="${sheet.experience}"></div>
+        <div class="field"><label ${tipAttr(FIELD_TIPS.level)}>Level</label><input type="number" min="1" max="20" data-path="level" data-numeric value="${sheet.level}" onchange="onLevelChange(this)"></div>
+        <div class="field"><label ${tipAttr(FIELD_TIPS.experience)}>Experience</label><input type="number" min="0" data-path="experience" data-numeric value="${sheet.experience}"></div>
       </div>
 
       <div class="field mt">
@@ -358,23 +410,23 @@ function render() {
           <button type="button" class="secondary" onclick="applyRolledStats()">Roll for Stats</button>
         </div>
         <div class="grid" style="grid-template-columns:repeat(6,1fr);gap:8px;">${abilityBoxes()}</div>
-        <p class="muted mt">Proficiency Bonus: <span id="profBonusDisplay">${fmtMod(profBonus())}</span></p>
+        <p class="muted mt">Proficiency Bonus: <span id="profBonusDisplay" ${tipAttr(FIELD_TIPS.profBonus)}>${fmtMod(profBonus())}</span></p>
       </div>
 
       <div class="panel">
         <h2>Combat</h2>
         <div class="grid grid-3">
-          <div class="field"><label>Armor Class</label><input type="number" data-path="ac" data-numeric value="${sheet.ac}"></div>
-          <div class="field"><label>Initiative Bonus</label><input type="number" data-path="initiativeBonus" data-numeric value="${sheet.initiativeBonus}"></div>
-          <div class="field"><label>Speed</label><input type="number" data-path="speed" data-numeric value="${sheet.speed}"></div>
+          <div class="field"><label ${tipAttr(FIELD_TIPS.ac)}>Armor Class</label><input type="number" data-path="ac" data-numeric value="${sheet.ac}"></div>
+          <div class="field"><label ${tipAttr(FIELD_TIPS.initiativeBonus)}>Initiative Bonus</label><input type="number" data-path="initiativeBonus" data-numeric value="${sheet.initiativeBonus}"></div>
+          <div class="field"><label ${tipAttr(FIELD_TIPS.speed)}>Speed</label><input type="number" data-path="speed" data-numeric value="${sheet.speed}"></div>
         </div>
-        <p class="muted">Total Initiative: <span id="initDisplay">${fmtMod(abilityMod(sheet.abilities.dex) + (parseInt(sheet.initiativeBonus,10)||0))}</span></p>
+        <p class="muted">Total Initiative: <span id="initDisplay" ${tipAttr(FIELD_TIPS.initiative)}>${fmtMod(abilityMod(sheet.abilities.dex) + (parseInt(sheet.initiativeBonus,10)||0))}</span></p>
         <div class="grid grid-3">
-          <div class="field"><label>Max HP</label><input type="number" data-path="hpMax" data-numeric value="${sheet.hpMax}"></div>
-          <div class="field"><label>Current HP</label><input type="number" data-path="hpCurrent" data-numeric value="${sheet.hpCurrent}"></div>
-          <div class="field"><label>Temp HP</label><input type="number" data-path="hpTemp" data-numeric value="${sheet.hpTemp}"></div>
+          <div class="field"><label ${tipAttr(FIELD_TIPS.hpMax)}>Max HP</label><input type="number" data-path="hpMax" data-numeric value="${sheet.hpMax}"></div>
+          <div class="field"><label ${tipAttr(FIELD_TIPS.hpCurrent)}>Current HP</label><input type="number" data-path="hpCurrent" data-numeric value="${sheet.hpCurrent}"></div>
+          <div class="field"><label ${tipAttr(FIELD_TIPS.hpTemp)}>Temp HP</label><input type="number" data-path="hpTemp" data-numeric value="${sheet.hpTemp}"></div>
         </div>
-        <div class="field"><label>Hit Dice</label><input data-path="hitDice" value="${escapeHtml(sheet.hitDice)}"></div>
+        <div class="field"><label ${tipAttr(FIELD_TIPS.hitDice)}>Hit Dice</label><input data-path="hitDice" value="${escapeHtml(sheet.hitDice)}"></div>
       </div>
     </div>
 
