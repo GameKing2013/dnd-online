@@ -21,10 +21,29 @@ const SKILLS = [
   ['survival', 'Survival', 'wis']
 ];
 
+const RACES = ['Human', 'Elf', 'Dwarf', 'Halfling', 'Dragonborn', 'Gnome', 'Half-Elf', 'Half-Orc', 'Tiefling'];
+const BACKGROUNDS = ['Acolyte', 'Charlatan', 'Criminal', 'Entertainer', 'Folk Hero', 'Guild Artisan', 'Hermit', 'Noble', 'Outlander', 'Sage', 'Sailor', 'Soldier', 'Urchin'];
+const ALIGNMENTS = ['Lawful Good', 'Neutral Good', 'Chaotic Good', 'Lawful Neutral', 'True Neutral', 'Chaotic Neutral', 'Lawful Evil', 'Neutral Evil', 'Chaotic Evil'];
+const CLASS_DATA = {
+  Barbarian: { hitDie: 12, choose: 2, skills: ['athletics', 'intimidation', 'animalHandling', 'nature', 'perception', 'survival'] },
+  Bard: { hitDie: 8, choose: 3, skills: 'any' },
+  Cleric: { hitDie: 8, choose: 2, skills: ['history', 'insight', 'medicine', 'persuasion', 'religion'] },
+  Druid: { hitDie: 8, choose: 2, skills: ['arcana', 'animalHandling', 'insight', 'medicine', 'nature', 'perception', 'religion', 'survival'] },
+  Fighter: { hitDie: 10, choose: 2, skills: ['acrobatics', 'animalHandling', 'athletics', 'history', 'insight', 'intimidation', 'perception', 'survival'] },
+  Monk: { hitDie: 8, choose: 2, skills: ['acrobatics', 'athletics', 'history', 'insight', 'religion', 'stealth'] },
+  Paladin: { hitDie: 10, choose: 2, skills: ['athletics', 'insight', 'intimidation', 'medicine', 'persuasion', 'religion'] },
+  Ranger: { hitDie: 10, choose: 3, skills: ['animalHandling', 'athletics', 'insight', 'investigation', 'nature', 'perception', 'stealth', 'survival'] },
+  Rogue: { hitDie: 8, choose: 4, skills: ['acrobatics', 'athletics', 'deception', 'insight', 'intimidation', 'investigation', 'perception', 'performance', 'persuasion', 'sleightOfHand', 'stealth'] },
+  Sorcerer: { hitDie: 6, choose: 2, skills: ['arcana', 'deception', 'insight', 'intimidation', 'persuasion', 'religion'] },
+  Warlock: { hitDie: 8, choose: 2, skills: ['arcana', 'deception', 'history', 'intimidation', 'investigation', 'nature', 'religion'] },
+  Wizard: { hitDie: 6, choose: 2, skills: ['arcana', 'history', 'insight', 'investigation', 'medicine', 'religion'] }
+};
+
 let character = null;
 let sheet = null;
 let saveTimer = null;
 let campaigns = [];
+let customMode = { race: false, class: false, background: false, alignment: false };
 
 function profBonus() {
   const level = parseInt(sheet.level, 10) || 1;
@@ -130,14 +149,104 @@ function savesBlock() {
 }
 
 function skillsBlock() {
-  return SKILLS.map(([key, label, ability]) => `
-    <div class="row" style="margin-bottom:5px;">
+  const cd = CLASS_DATA[sheet.class];
+  const classSkills = cd ? (cd.skills === 'any' ? SKILLS.map((s) => s[0]) : cd.skills) : [];
+  const hint = cd
+    ? `<p class="muted" style="margin-top:-4px;margin-bottom:10px;">${escapeHtml(sheet.class)} typically picks ${cd.choose} skill${cd.choose > 1 ? 's' : ''} from the highlighted options below.</p>`
+    : '';
+  const rows = SKILLS.map(([key, label, ability]) => {
+    const isClassSkill = classSkills.includes(key);
+    return `
+    <div class="row" style="margin-bottom:5px;${isClassSkill ? 'background:rgba(201,162,75,0.1);border-radius:4px;padding:2px 4px;' : ''}">
       <input type="checkbox" data-path="skillProficiencies.${key}" ${sheet.skillProficiencies[key] ? 'checked' : ''} style="width:auto;">
       <span class="val" id="skill-${key}-bonus" style="width:34px;display:inline-block;color:var(--gold-bright);font-weight:bold;">${fmtMod(abilityMod(sheet.abilities[ability]) + (sheet.skillProficiencies[key] ? profBonus() : 0))}</span>
-      <span>${label} <span class="muted">(${ability.toUpperCase()})</span></span>
-    </div>
-  `).join('');
+      <span>${label} <span class="muted">(${ability.toUpperCase()})</span>${isClassSkill ? ' <span class="pill dm" style="padding:0 6px;font-size:10px;">class</span>' : ''}</span>
+    </div>`;
+  }).join('');
+  return hint + rows;
 }
+
+function isCustomValue(field, options) {
+  return customMode[field] || !!(sheet[field] && !options.includes(sheet[field]));
+}
+
+function choiceField(field, label, options) {
+  const val = sheet[field];
+  const custom = isCustomValue(field, options);
+  const opts = options.map((o) => `<option value="${escapeHtml(o)}" ${val === o && !custom ? 'selected' : ''}>${escapeHtml(o)}</option>`).join('');
+  return `
+    <div class="field">
+      <label>${label}</label>
+      <select onchange='onChoiceChange(this, "${field}", ${JSON.stringify(options)})'>
+        <option value="">-- Choose --</option>
+        ${opts}
+        <option value="__custom__" ${custom ? 'selected' : ''}>Custom / Other...</option>
+      </select>
+      ${custom ? `<input id="${field}CustomInput" placeholder="Enter custom ${label.toLowerCase()}" value="${escapeHtml(val || '')}" oninput="onCustomInput(this,'${field}')" style="margin-top:6px;">` : ''}
+    </div>
+  `;
+}
+
+function onChoiceChange(select, field, options) {
+  const val = select.value;
+  if (val === '__custom__') {
+    customMode[field] = true;
+    render();
+    setTimeout(() => {
+      const el = document.getElementById(field + 'CustomInput');
+      if (el) el.focus();
+    }, 0);
+    return;
+  }
+  customMode[field] = false;
+  setPath(sheet, field, val);
+  if (field === 'class') {
+    const cd = CLASS_DATA[val];
+    if (cd) sheet.hitDice = `${parseInt(sheet.level, 10) || 1}d${cd.hitDie}`;
+  }
+  render();
+  scheduleSave();
+}
+
+window.onChoiceChange = onChoiceChange;
+
+window.onCustomInput = function (input, field) {
+  setPath(sheet, field, input.value);
+  scheduleSave();
+};
+
+window.onLevelChange = function (input) {
+  const level = parseInt(input.value, 10) || 1;
+  sheet.level = level;
+  const cd = CLASS_DATA[sheet.class];
+  if (cd) {
+    sheet.hitDice = `${level}d${cd.hitDie}`;
+    const hitDiceInput = document.querySelector('[data-path="hitDice"]');
+    if (hitDiceInput) hitDiceInput.value = sheet.hitDice;
+  }
+  updateDerived();
+  scheduleSave();
+};
+
+function rollAbilityScore() {
+  const rolls = [0, 0, 0, 0].map(() => 1 + Math.floor(Math.random() * 6));
+  rolls.sort((a, b) => a - b);
+  rolls.shift();
+  return rolls.reduce((a, b) => a + b, 0);
+}
+
+window.applyStandardArray = function () {
+  const arr = [15, 14, 13, 12, 10, 8];
+  ABILITIES.forEach((a, i) => { sheet.abilities[a] = arr[i]; });
+  render();
+  scheduleSave();
+};
+
+window.applyRolledStats = function () {
+  ABILITIES.forEach((a) => { sheet.abilities[a] = rollAbilityScore(); });
+  render();
+  scheduleSave();
+};
 
 function attacksRows() {
   if (!sheet.attacks.length) return '<tr><td colspan="4" class="muted">No attacks added.</td></tr>';
@@ -224,11 +333,11 @@ function render() {
       </div>
 
       <div class="grid grid-3 mt">
-        <div class="field"><label>Race</label><input data-path="race" value="${escapeHtml(sheet.race)}"></div>
-        <div class="field"><label>Class</label><input data-path="class" value="${escapeHtml(sheet.class)}"></div>
-        <div class="field"><label>Background</label><input data-path="background" value="${escapeHtml(sheet.background)}"></div>
-        <div class="field"><label>Alignment</label><input data-path="alignment" value="${escapeHtml(sheet.alignment)}"></div>
-        <div class="field"><label>Level</label><input type="number" min="1" max="20" data-path="level" data-numeric value="${sheet.level}"></div>
+        ${choiceField('race', 'Race', RACES)}
+        ${choiceField('class', 'Class', Object.keys(CLASS_DATA))}
+        ${choiceField('background', 'Background', BACKGROUNDS)}
+        ${choiceField('alignment', 'Alignment', ALIGNMENTS)}
+        <div class="field"><label>Level</label><input type="number" min="1" max="20" data-path="level" data-numeric value="${sheet.level}" onchange="onLevelChange(this)"></div>
         <div class="field"><label>Experience</label><input type="number" min="0" data-path="experience" data-numeric value="${sheet.experience}"></div>
       </div>
 
@@ -244,6 +353,10 @@ function render() {
     <div class="grid grid-2">
       <div class="panel">
         <h2>Ability Scores</h2>
+        <div class="row" style="gap:8px;margin-bottom:10px;">
+          <button type="button" class="secondary" onclick="applyStandardArray()">Standard Array</button>
+          <button type="button" class="secondary" onclick="applyRolledStats()">Roll for Stats</button>
+        </div>
         <div class="grid" style="grid-template-columns:repeat(6,1fr);gap:8px;">${abilityBoxes()}</div>
         <p class="muted mt">Proficiency Bonus: <span id="profBonusDisplay">${fmtMod(profBonus())}</span></p>
       </div>
