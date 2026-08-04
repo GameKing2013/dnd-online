@@ -199,6 +199,43 @@ th { color: var(--text-dim); font-weight: normal; font-size: 12px; text-transfor
   font-size: 14px;
 }
 
+/* Hover tooltips */
+[data-tip] {
+  cursor: help;
+  border-bottom: 1px dotted var(--text-dim);
+  position: relative;
+  display: inline-block;
+}
+[data-tip]::after {
+  content: attr(data-tip);
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 0;
+  background: #0c0906;
+  color: var(--text);
+  border: 1px solid var(--gold);
+  padding: 8px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: normal;
+  text-transform: none;
+  letter-spacing: normal;
+  line-height: 1.4;
+  white-space: normal;
+  width: max-content;
+  max-width: 240px;
+  box-shadow: 0 4px 14px rgba(0,0,0,0.6);
+  z-index: 80;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.12s ease;
+  pointer-events: none;
+}
+[data-tip]:hover::after {
+  opacity: 1;
+  visibility: visible;
+}
+
 /* Session / live play layout */
 .session-layout {
   display: grid;
