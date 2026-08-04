@@ -40,7 +40,7 @@ function renderTopbar(activePage, user) {
   const el = document.getElementById('topbar');
   if (!el) return;
   el.innerHTML = `
-    <a class="logo-link" href="/dashboard.html"><h1>&#9876;&#65039; D&amp;D Online</h1></a>
+    <a class="logo-link" href="/dashboard.html"><h1>&#127922; Nat20</h1></a>
     <nav>
       <a href="/dashboard.html" style="${activePage==='dashboard' ? 'color:var(--gold-bright)':''}">Dashboard</a>
       <span class="muted" style="margin-left:16px;">${user ? escapeHtml(user.username) : ''}</span>
